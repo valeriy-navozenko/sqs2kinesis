@@ -71,6 +71,44 @@ class BatcherSpec extends Specification {
       result should contain(exactly(Vector("aaa", "bbb")))
     }
 
+    "emit a batch when the batchDelay time is exceeded" in {
+
+      val maxSize = 3000
+      val maxWeight = 10000
+
+      val keepAlive = 10.millis
+      val batchDelay = Some(100.millis)
+
+      val flow = Batcher.batch[String](keepAlive, maxSize, maxWeight, _.size, batchDelay)
+
+      val source = Source(List("aaa", "bbb", "ccc", "ddd", "eee")).concat(Source.never)
+
+      val future = source.via(flow).takeWithin(batchDelay.value * 10).runWith(Sink.seq)
+
+      val result = Await.result(future, batchDelay.value * 100)
+
+      result should contain(exactly(Vector("aaa", "bbb", "ccc", "ddd", "eee")))
+    }
+
+    "emit no batches if the batchDelay time is never exceeded" in {
+
+      val maxSize = 3
+      val maxWeight = 10000
+
+      val keepAlive = 10.millis
+      val batchDelay = Some(500.millis)
+
+      val flow = Batcher.batch[String](keepAlive, maxSize, maxWeight, _.size, batchDelay)
+
+      val source = Source(List("aaa", "bbb")).concat(Source.never)
+
+      val future = source.via(flow).takeWithin(keepAlive * 10).runWith(Sink.seq)
+
+      val result = Await.result(future, keepAlive * 100)
+
+      result should beEmpty
+    }
+
     "emit no batches if the keepAlive time is never exceeded" in {
 
       val maxSize   = 10000

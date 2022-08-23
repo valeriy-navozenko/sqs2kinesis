@@ -24,26 +24,28 @@ object Batcher {
     *  @param maxSize The maximum number of elements allowed in a batch
     *  @param maxWeight The maximum "weight" of an element. For example, this could be it's size in bytes.
     *  @param toWeight How to calculate the weight of an element
+    *  @param batchDelay TODO
     *  @return A Flow that emits batches
     */
   def batch[T](
     keepAlive: FiniteDuration,
     maxSize: Int,
     maxWeight: Int,
-    toWeight: T => Int
+    toWeight: T => Int,
+    batchDelay: Option[FiniteDuration] = None
   ): Flow[T, Vector[T], NotUsed] =
     Flow[T]
       .map(m => Message(m, toWeight(m)))
       .concat(Source(Seq(Flush)))
-      .keepAlive(keepAlive, () => Flush)
+      .keepAlive(batchDelay.getOrElse(keepAlive), () => Flush)
       .via(scanFlush(State[T](Vector.empty, 0)) {
         case (State(acc, _), Flush) =>
           (State(Vector.empty, 0), Some(acc))
         case (State(acc, accWeight), Message(value, weight)) =>
           val combined = accWeight + weight
-          if (combined >= maxWeight)
+          if (combined >= maxWeight && batchDelay.isEmpty)
             (State(Vector(value), weight), Some(acc))
-          else if (acc.size + 1 >= maxSize)
+          else if (acc.size + 1 >= maxSize && batchDelay.isEmpty)
             (State(Vector.empty, 0), Some(acc :+ value))
           else
             (State(acc :+ value, combined), None)
