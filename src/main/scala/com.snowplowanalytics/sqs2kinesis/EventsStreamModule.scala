@@ -90,7 +90,8 @@ object EventsStreamModule {
         maxWeight = kinesisConfig.maxKinesisBytesPerRequest,
         toWeight = { m =>
           m.bytes.size + m.key.getBytes.size
-        }
+        },
+        batchDelay = kinesisConfig.batchDelay
       )
       .via(kinesisFlow(kinesisConfig, kinesisClient))
       .to(confirmSqsSink(sqsConfig))

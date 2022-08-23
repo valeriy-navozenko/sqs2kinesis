@@ -32,7 +32,9 @@
       minBackoff: 500 millis
       maxBackoff: 1 second
       randomFactor: 0.1
-      maxRetries: 5
+      maxRetries: 5,
+      # Optional, this parameter will have higher priority than maxKinesisBatch and keepAlive
+      batchDelay: 15 seconds
     }
 
     # Configure output kinesis stream for invalid messages

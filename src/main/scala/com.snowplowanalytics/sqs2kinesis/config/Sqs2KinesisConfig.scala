@@ -72,7 +72,8 @@ object Sqs2KinesisConfig {
     minBackoff: FiniteDuration,
     maxBackoff: FiniteDuration,
     randomFactor: Double,
-    maxRetries: Int
+    maxRetries: Int,
+    batchDelay: Option[FiniteDuration] = None,
   )
 
   case class Output(good: KinesisConfig, bad: KinesisConfig)
